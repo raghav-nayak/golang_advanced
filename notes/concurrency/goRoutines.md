@@ -38,7 +38,7 @@ func main() {
 
 output:
 ```shell
-$ go run primitives.go
+$ go run goRoutines.go
 3
 2
 1
