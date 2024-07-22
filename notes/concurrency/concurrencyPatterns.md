@@ -47,3 +47,39 @@ func main(){
 	time.Sleep(time.Second * 2)
 }
 ```
+
+
+### 2. Done channel
+the parent or caller function can control the infinite running go routine by using done channel.
+
+```go
+package main
+
+import (
+	"fmt"
+	"time"
+)
+
+// infinite running go routine
+func doWork(done <- chan bool) {
+	for {
+		select {
+			case <- done:
+				fmt.Println("done")
+				return
+
+			default:
+				fmt.Println("running infinitely")
+		}
+	}
+}
+
+func main(){
+	done := make(chan bool)
+
+	go doWork(done)
+
+	time.Sleep(time.Second * 3)
+	close(done) // this will initial the stopping of infinitely running go routine
+}
+```
