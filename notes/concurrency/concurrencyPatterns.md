@@ -50,7 +50,9 @@ func main(){
 
 
 ### 2. Done channel
-the parent or caller function can control the infinite running go routine by using done channel.
+The **done channel** is commonly used to signal the completion of a goroutine or a task. It is a channel that is closed when the task is finished.
+
+The parent or caller function can control the infinite running go routine by using done channel.
 
 ```go
 package main
