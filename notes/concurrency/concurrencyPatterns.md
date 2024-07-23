@@ -50,9 +50,7 @@ func main(){
 
 
 ### 2. Done channel
-The **done channel** is commonly used to signal the completion of a goroutine or a task. It is a channel that is closed when the task is finished.
-
-The parent or caller function can control the infinite running go routine by using done channel.
+the parent or caller function can control the infinite running go routine by using done channel.
 
 ```go
 package main
@@ -86,4 +84,51 @@ func main(){
 }
 ```
 
+
 ### 3. Pipeline
+
+![[go_pipeline.png]]
+
+We can achieve something in each stages. We separate the concern in each stages.
+
+```go
+package main
+
+import "fmt"
+
+func sliceToChannel(nums []int) <-chan int {
+	out := make(chan int) // unbuffered channel
+	go func() {
+		for _, n := range nums {
+			out <- n
+		}
+		close(out)
+	}() //invoke as it is a anonymous function
+	return out
+}
+
+func square(in <- chan int) <- chan int {
+	out := make(chan int)
+	go func() {
+		for n:= range in { // blocked till it reads the value from the channel
+			out <- n * n 
+		}
+	}()
+	return out
+}
+func main() {
+	// input
+	nums := []int{2,34,7,1}
+
+	// stage 1
+	dataChannel := sliceToChannel(nums)
+
+	// stage 2
+	squaredChannel := square(dataChannel)
+
+	// stage 3
+	for n := range squaredChannel{
+		fmt.Println(n)
+	}
+}
+```
