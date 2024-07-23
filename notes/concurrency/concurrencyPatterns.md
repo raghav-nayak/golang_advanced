@@ -85,3 +85,5 @@ func main(){
 	close(done) // this will initial the stopping of infinitely running go routine
 }
 ```
+
+### 3. Pipeline
