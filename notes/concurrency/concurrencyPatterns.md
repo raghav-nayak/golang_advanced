@@ -195,4 +195,4 @@ func main() {
 }
 ```
 
-Now you will only 10 random ints.
+Now you will get 10 random integer numbers only.
