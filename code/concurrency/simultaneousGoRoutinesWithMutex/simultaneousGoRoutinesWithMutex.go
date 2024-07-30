@@ -14,10 +14,10 @@ func process(data int) int {
 }
 
 func processData(wg *sync.WaitGroup, result *[]int, data int) {
-	lock.Lock()
 	defer wg.Done() // to inform the go routine that it is done
 	processedData := process(data)
-	*result = append(*result, processedData)
+	lock.Lock()
+	*result = append(*result, processedData) //critical section
 	lock.Unlock()
 }
 
@@ -38,6 +38,5 @@ func main() {
 	wg.Wait()
 	fmt.Println(result)
 	fmt.Println(time.Since(start))
-
 }
 
