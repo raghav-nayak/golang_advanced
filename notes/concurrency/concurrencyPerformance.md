@@ -178,5 +178,29 @@ $ go run simultaneousGoRoutinesWithMutex.go
 
 as you can see, it is taking 10 sec as each go routine take 2 sec to release the lock. Now, it is synchronous and iterative method even though we are using concurrency.
 
-##### confinement
+##### improved mutex
+
+If you carefully observe, `processedData := process(data)` is not a critical section here. The critical section is `*result = append(*result, processedData)`.
+**be careful about the locking any code**
+
+By moving the lock, we can achieve better results.
+
+```go
+...
+func processData(wg *sync.WaitGroup, result *[]int, data int) {
+	defer wg.Done() // to inform the go routine that it is done
+	processedData := process(data)
+	lock.Lock()
+	*result = append(*result, processedData) // critical section
+	lock.Unlock()
+}
+...
+```
+
+output
+```shell
+$ go run simultaneousGoRoutinesWithMutex.go
+[4 2 10 6 8]
+2.001387375s
+```
 
