@@ -8,6 +8,24 @@
 
 Solution: Mutex(mutual exclusion) -> naive approach
 
+#### Mutex
+
+A mutex (short for "mutual exclusion") in Go is a fundamental synchronization primitive used to protect shared resources from concurrent access. It ensures that only one goroutine can access a critical section of code at a time, thus preventing race conditions and ensuring data consistency.
+
+##### Basic Usage
+
+The `sync` package in Go provides two main types of mutexes:
+
+1. **Mutex** (`sync.Mutex`)
+2. **RWMutex** (`sync.RWMutex`)
+
+
+A `Mutex` provides a simple locking mechanism.
+
+- **Lock**: The `Lock` method locks the mutex. If the mutex is already locked, the calling goroutine blocks until the mutex is unlocked.
+- **Unlock**: The `Unlock` method unlocks the mutex. If other goroutines are waiting for the mutex to be unlocked, one of them will proceed to lock it.
+
+
 It is kind of locking mechanism which locks the usage of the resource and other go routines must wait till the lock is released.
 It is a naive approach.
 This will create a bottleneck.
