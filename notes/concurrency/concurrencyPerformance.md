@@ -222,3 +222,4 @@ $ go run simultaneousGoRoutinesWithMutex.go
 2.001387375s
 ```
 
+If possible, avoid using mutex.
