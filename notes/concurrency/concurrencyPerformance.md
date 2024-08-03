@@ -286,3 +286,10 @@ $ go run -race simultaneousGoRoutinesWithMutex.go
 [2 4 6 8 10]
 2.001568875s
 ```
+
+
+##### reason
+If you closely watch, in mutex, we were sending entire slice and each call of go routine was trying to append value to the slice.
+In confinement, each individual go routine accesses only one index and updates it. Each go routine is "confined" to a particular index.
+
+![[Pasted image 20240803221720.png]]
