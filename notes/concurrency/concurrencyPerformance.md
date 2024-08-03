@@ -222,4 +222,67 @@ $ go run simultaneousGoRoutinesWithMutex.go
 2.001387375s
 ```
 
-If possible, avoid using mutex.
+
+
+#### Confinement 
+confine the goroutine to specific part of the shared resource
+```go
+package main
+
+import (
+	"fmt"
+	"sync"
+	"time"
+)
+
+var lock sync.Mutex
+
+func process(data int) int {
+	time.Sleep(time.Second * 2)
+	return data * 2
+}
+
+func processData(wg *sync.WaitGroup, resultDest *int, data int) {
+	defer wg.Done() // to inform the go routine that it is done
+	processedData := process(data)
+
+	*resultDest = processedData //critical section
+}
+
+
+func main() {
+	start := time.Now()
+	var wg sync.WaitGroup
+
+	input := []int{1,2,3,4,5}
+	result := make([]int, len(input))
+
+	for i, data := range input {
+		wg.Add(1)
+		go processData(&wg, &result[i], data)  
+
+	}
+	wg.Wait()
+	fmt.Println(result)
+	fmt.Println(time.Since(start))
+}
+```
+
+```shell
+$ go run simultaneousGoRoutinesWithMutex.go 
+[2 4 6 8 10]
+2.000412459s
+
+$ go run simultaneousGoRoutinesWithMutex.go
+[2 4 6 8 10]
+2.000947375s
+```
+
+Now you can see instead of passing entire slice, we are passing only one element. Now, you can see the output and order is maintained.
+
+You can also check the race condition
+```sh
+$ go run -race simultaneousGoRoutinesWithMutex.go
+[2 4 6 8 10]
+2.001568875s
+```
