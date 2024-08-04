@@ -230,12 +230,12 @@ confine the goroutine to specific part of the shared resource
 Confinement in the context of Go routines refers to the practice of limiting the access to shared data to a specific, well-defined region of your program. This is a crucial technique for preventing race conditions and ensuring data integrity in concurrent applications.   
 
 ##### Why is confinement important?
-Preventing race conditions: When multiple goroutines access shared data without proper synchronization, race conditions can occur, leading to unpredictable and inconsistent behavior.   
-Enhancing data integrity: Confinement helps to guarantee that data is modified correctly and consistently, avoiding data corruption.
-Improving code readability and maintainability: By limiting the scope of shared data, code becomes easier to understand and modify.
-How to achieve confinement?
-There are primarily two ways to achieve confinement in Go:
+- Preventing race conditions: When multiple goroutines access shared data without proper synchronization, race conditions can occur, leading to unpredictable and inconsistent behavior.   
+- Enhancing data integrity: Confinement helps to guarantee that data is modified correctly and consistently, avoiding data corruption.
+- Improving code readability and maintainability: By limiting the scope of shared data, code becomes easier to understand and modify.
 
+##### How to achieve confinement?
+There are primarily two ways to achieve confinement in Go:
 **1. Synchronization primitives:**
 **Mutexes:** These are used to protect shared data from concurrent access. Only one goroutine can hold a mutex at a time, ensuring exclusive access to the protected data.   
 **RWLocks:** These provide more granular control, allowing multiple read operations simultaneously but only one write operation at a time.   
