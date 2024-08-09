@@ -1,262 +1,64 @@
-#go #concurrency 
+# "or done" pattern
+In Go, channels are often used for communication between goroutines, and the "or done" pattern helps manage the scenario where you need to wait for either a task to complete or for a cancellation signal to occur. The `select` statement is used to listen on multiple channels simultaneously, and this pattern leverages that capability.
 
-**critical section**
-- there is no synchronous access between go routines.
-- result in race condition
-![[go_critical_section.png]]
+When you have a channel for a task and a "done" channel for cancellation or completion signals, you can use the `select` statement to handle either case.
 
+#### Use Cases
+- **Handling Task Completion**: When you need to perform a task and wait for it to complete while also being able to handle timeouts or cancellation.
+- **Graceful Shutdown**: When you need to stop ongoing operations when a shutdown signal is received, such as when handling server requests or background jobs.
 
-Solution: Mutex(mutual exclusion) -> naive approach
+### Key Points
 
-#### Mutex
+- The "or done" pattern allows you to handle multiple conditions concurrently, making your code more responsive and flexible.
+- Using channels for cancellation and task signaling is a common idiom in Go, leveraging the concurrency model effectively.
+- Always be mindful of closing channels and properly handling all possible cases to avoid leaks or deadlocks.
 
-A mutex (short for "mutual exclusion") in Go is a fundamental synchronization primitive used to protect shared resources from concurrent access. It ensures that only one goroutine can access a critical section of code at a time, thus preventing race conditions and ensuring data consistency.
+![[go_do_channel.png]]
 
-##### Basic Usage
-
-The `sync` package in Go provides two main types of mutexes:
-
-1. **Mutex** (`sync.Mutex`)
-2. **RWMutex** (`sync.RWMutex`)
+![[go_or_done_channel.png]]
 
 
-Using mutexes in Go (Golang) is a common and effective practice for managing concurrent access to shared resources. However, as with any concurrency control mechanism, it should be used judiciously and with an understanding of its implications. Here are some key points to consider:
 
-Advantages of Using Mutexes
-- Simplicity: Mutexes provide a straightforward way to ensure that only one goroutine accesses a shared resource at a time.
-- Performance: When used correctly, mutexes can be efficient and provide high performance for managing concurrent access.
-- Fine-grained Control: Mutexes allow you to control exactly when a resource is locked and unlocked, giving you precise control over concurrency.
-
-Best Practices
-- Keep Critical Sections Short: Minimize the code inside the critical section (i.e., the code between Lock() and Unlock()) to reduce the time the mutex is held and thus decrease contention.
-- Avoid Deadlocks: Ensure that all code paths that acquire a mutex also release it, even in the presence of errors. Consider using defer to release the mutex.
-- Use Read/Write Mutexes: If you have a scenario with many readers and few writers, consider using sync.RWMutex to allow multiple concurrent reads while still ensuring exclusive access for writes.
-- Profile and Monitor: Use Go's profiling tools to monitor the performance of your application and identify any bottlenecks caused by mutex contention.
-
-A `Mutex` provides a simple locking mechanism.
-
-- **Lock**: The `Lock` method locks the mutex. If the mutex is already locked, the calling goroutine blocks until the mutex is unlocked.
-- **Unlock**: The `Unlock` method unlocks the mutex. If other goroutines are waiting for the mutex to be unlocked, one of them will proceed to lock it.
-
-
-It is kind of locking mechanism which locks the usage of the resource and other go routines must wait till the lock is released.
-It is a naive approach.
-This will create a bottleneck.
-
-
-without any locking mechanism
-
-`simultaneousGoRoutines.go`
 ```go
 package main
 
-import (
-	"fmt"
-	"sync"
-)
-
-func processData(wg *sync.WaitGroup, result *[]int, data int) {
-	defer wg.Done() // to inform the go routine that it is done
-	processedData := data * 2
-	*result = append(*result, processedData)
-}
+import "fmt"
 
 func main() {
-	var wg sync.WaitGroup
+	done := make(chan interface{})
 
-	input := []int{1,2,3,4,5}
-	result := []int{}
+	done <- "string"
+	done <- 24
 
-	for _, data := range input {
-		wg.Add(1)
-		go processData(&wg, &result, data) // wg is passed to tell the function that it is finished
-	}
+	var1 := <- done
+	var2 := <- done
 
-	wg.Wait()
-	fmt.Println(result)
+	fmt.Println(var1)
+	fmt.Println(var2)
 }
 ```
 
 output
-```sh
-$ go run simultaneousGoRoutines.go               
-[10 6 8 2]
-
-$ go run simultaneousGoRoutines.go 
-[2 6 4]
-```
-
-
-with mutex(naive solution)
-```Go
-package main
-
-import (
-	"fmt"
-	"sync"
-)
-
-var lock sync.Mutex
-
-func processData(wg *sync.WaitGroup, result *[]int, data int) {
-	lock.Lock()
-	defer wg.Done() // to inform the go routine that it is done
-	processedData := data * 2
-	*result = append(*result, processedData)
-	lock.Unlock()
-}
-
-
-func main() {
-	var wg sync.WaitGroup
-
-	input := []int{1,2,3,4,5}
-
-	result := []int{}
-
-	for _, data := range input {
-		wg.Add(1)
-		go processData(&wg, &result, data) // wg is passed to tell the function that it is finished
-
-	}
-	wg.Wait()
-	fmt.Println(result)
-}
-```
-
-output:
 ```shell
-$ go run simultaneousGoRoutinesWithMutex.go
-[10 6 8 4 2]
+$ go run or_done_channel.go 
+fatal error: all goroutines are asleep - deadlock!
 
-$ go run simultaneousGoRoutinesWithMutex.go
-[10 6 8 4 2]
+goroutine 1 [chan send]:
+main.main()
 
-$ go run simultaneousGoRoutinesWithMutex.go
-[10 4 6 8 2]
-
-$ go run simultaneousGoRoutinesWithMutex.go
-[10 2 4 6 8]
-
-$ go run simultaneousGoRoutinesWithMutex.go
-[4 10 2 6 8]
-
-$ go run simultaneousGoRoutinesWithMutex.go
-[2 10 4 6 8]
-```
-As you can see, we get all the numbers 
-
-
-If there is any processing between lock and unlock, it takes time to process.
-
-```go
-package main
-
-import (
-	"fmt"
-	"sync"
-	"time"
-)
-
-var lock sync.Mutex
-
-func process(data int) int {
-	time.Sleep(time.Second * 2)
-	return data * 2
-}
-
-func processData(wg *sync.WaitGroup, result *[]int, data int) {
-	lock.Lock()
-	defer wg.Done() // to inform the go routine that it is done
-	processedData := process(data)
-	*result = append(*result, processedData)
-	lock.Unlock()
-}
-
-
-func main() {
-	start := time.Now()
-	var wg sync.WaitGroup
-
-	input := []int{1,2,3,4,5}
-
-	result := []int{}
-
-	for _, data := range input {
-		wg.Add(1)
-		go processData(&wg, &result, data) // wg is passed to tell the function that it is finished
-
-	}
-	wg.Wait()
-	fmt.Println(result)
-	fmt.Println(time.Since(start))
-}
+/go/src/github.com/golang_advanced/code/concurrency/or_done_channel/or_done_channel.go:8 +0x50
+exit status 2
 ```
 
-==without lock==
-```shell
-$ go run simultaneousGoRoutinesWithMutex.go
-[6 4]
-2.001703625s
-```
-
-==with lock==
-```sh
-$ go run simultaneousGoRoutinesWithMutex.go
-[2 4 10 8 6]
-10.004206584sz
-```
-
-as you can see, it is taking 10 sec as each go routine take 2 sec to release the lock. Now, it is synchronous and iterative method even though we are using concurrency.
-
-##### improved mutex
-
-If you carefully observe, `processedData := process(data)` is not a critical section here. The critical section is `*result = append(*result, processedData)`.
-**be careful about the locking any code**
-
-By moving the lock, we can achieve better results.
-
-```go
-...
-func processData(wg *sync.WaitGroup, result *[]int, data int) {
-	defer wg.Done() // to inform the go routine that it is done
-	processedData := process(data)
-	lock.Lock()
-	*result = append(*result, processedData) // critical section
-	lock.Unlock()
-}
-...
-```
+solution is 
+`done := make(chan interface{}, 10)`
 
 output
 ```shell
-$ go run simultaneousGoRoutinesWithMutex.go
-[4 2 10 6 8]
-2.001387375s
+$ go run or_done_channel.go
+string
+24
 ```
-
-
-
-#### Confinement 
-confine the goroutine to specific part of the shared resource
-
-Confinement in the context of Go routines refers to the practice of limiting the access to shared data to a specific, well-defined region of your program. This is a crucial technique for preventing race conditions and ensuring data integrity in concurrent applications.   
-
-##### Why is confinement important?
-- Preventing race conditions: When multiple goroutines access shared data without proper synchronization, race conditions can occur, leading to unpredictable and inconsistent behavior.   
-- Enhancing data integrity: Confinement helps to guarantee that data is modified correctly and consistently, avoiding data corruption.
-- Improving code readability and maintainability: By limiting the scope of shared data, code becomes easier to understand and modify.
-
-##### How to achieve confinement?
-There are primarily two ways to achieve confinement in Go:
-**1. Synchronization primitives:**
-**Mutexes:** These are used to protect shared data from concurrent access. Only one goroutine can hold a mutex at a time, ensuring exclusive access to the protected data.   
-**RWLocks:** These provide more granular control, allowing multiple read operations simultaneously but only one write operation at a time.   
-**Channels:** While primarily used for communication, channels can also be used for synchronization. For example, a buffered channel can act as a queue for shared data, limiting access to the data itself.   
-
-**2. Data locality:**
-**Goroutine-local storage:** Each goroutine has its own local storage, which can be used to hold data that is not shared with other goroutines.
-**Function-local variables:** Data declared within a function is typically confined to that function, preventing access from other goroutines.
 
 
 ```go
@@ -265,64 +67,215 @@ package main
 import (
 	"fmt"
 	"sync"
-	"time"
 )
 
-var lock sync.Mutex
-
-func process(data int) int {
-	time.Sleep(time.Second * 2)
-	return data * 2
-}
-
-func processData(wg *sync.WaitGroup, resultDest *int, data int) {
-	defer wg.Done() // to inform the go routine that it is done
-	processedData := process(data)
-
-	*resultDest = processedData //critical section
-}
-
+var wg sync.WaitGroup
 
 func main() {
-	start := time.Now()
-	var wg sync.WaitGroup
+	done := make(chan interface{}, 10)
 
-	input := []int{1,2,3,4,5}
-	result := make([]int, len(input))
+	defer close(done)
 
-	for i, data := range input {
-		wg.Add(1)
-		go processData(&wg, &result[i], data)  
+	cows := make(chan interface{}, 10)
+	pigs := make(chan interface{}, 10)
 
+	go func() {
+		for {
+			select {
+			case <- done:
+				return
+			case cows <- "moo":
+			}
+		}
+	}()
+	
+	go func() {
+		for {
+			select {
+			case <- done:
+				return
+			case pigs <- "oink":
+			}
+		}
+	}()
+
+	wg.Add(1)
+	go consumeCows(done, cows)
+	wg.Add(1)
+	go consumePigs(done, pigs)
+
+}
+
+func consumeCows(done <-chan interface{}, cows <-chan interface{}){
+	defer wg.Done()
+
+	for {
+		select {
+		case <- done:
+			return
+		case cow, ok := <- cows:
+			if !ok {
+				fmt.Println("channel closed")
+				return
+			}
+			// do some complex logic
+			fmt.Println(cow)
+		}
 	}
-	wg.Wait()
-	fmt.Println(result)
-	fmt.Println(time.Since(start))
+} 
+
+
+func consumePigs(done <-chan interface{}, pigs <-chan interface{}){
+	defer wg.Done()
+
+	for {
+		select {
+		case <- done:
+			return
+		case pig, ok := <- pigs:
+			if !ok {
+				fmt.Println("channel closed")
+				return
+			}
+			// do some complex logic
+			fmt.Println(pig)
+		}
+	}
+} 
+```
+
+
+#### goroutine leak
+A goroutine leak occurs when a goroutine in a Go program is no longer needed but continues to run, consuming resources and potentially causing performance issues or crashes. Goroutines are lightweight threads managed by the Go runtime, and while they're designed to be efficient, they can still cause problems if not managed properly.
+
+### Causes of Goroutine Leaks:
+
+1. **Blocking Operations**: If a goroutine is blocked indefinitely on a channel or a synchronization primitive (like a mutex), it can lead to a leak if the goroutine is not supposed to be running forever.
+2. **Uncleared Channels**: Goroutines waiting on channels that are never closed or receive values can lead to leaks, especially if the channel is not properly cleaned up when it's no longer needed.
+3. **Improper Synchronization**: Using synchronization mechanisms incorrectly, such as not using `sync.WaitGroup` properly, can leave goroutines running after they should have been terminated.
+4. **Unbounded Resource Usage**: Goroutines that continuously allocate memory or resources without proper limits or cleanup can lead to leaks.
+    
+
+### Detecting Goroutine Leaks:
+
+1. **Profiling**: Go's built-in profiling tools, like `pprof`, can help identify goroutines that are stuck or not terminating. You can use these tools to generate profiles and analyze them to spot leaks.
+2. **Static Analysis**: Tools like `golangci-lint` can sometimes detect potential issues in code that might lead to goroutine leaks.
+3. **Code Review**: Carefully reviewing code for proper goroutine management practices can help catch potential leaks. Ensuring that channels are closed, synchronization is handled correctly, and goroutines are only running as long as needed is key.
+### Mitigating Goroutine Leaks:
+
+1. **Proper Channel Management**: Ensure that channels are closed properly when they are no longer needed.
+2. **Use Contexts**: Using `context.Context` for managing goroutine lifetimes can help ensure they are canceled or terminated appropriately.
+3. **Synchronization**: Use synchronization primitives like `sync.WaitGroup` to ensure all goroutines complete before the program exits.
+4. **Timeouts and Limits**: Implement timeouts and resource limits to avoid goroutines running indefinitely.
+5. **Testing**: Regularly test for potential leaks using stress tests and profiling tools.
+    
+
+By being mindful of these practices, you can minimize the risk of goroutine leaks and ensure your Go applications run efficiently.
+
+in the above example, we are using `case <- done` to close the channel gracefully.
+
+```go
+package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+var wg sync.WaitGroup
+
+func main() {
+	done := make(chan interface{}, 10)
+
+	defer close(done)
+
+	cows := make(chan interface{}, 10)
+	pigs := make(chan interface{}, 10)
+
+	go func() {
+		for {
+			select {
+			case <- done:
+				return
+			case cows <- "moo":
+			}
+		}
+	}()
+	
+	go func() {
+		for {
+			select {
+			case <- done:
+				return
+			case pigs <- "oink":
+			}
+		}
+	}()
+
+	wg.Add(1)
+	go consumeCows(done, cows)
+	wg.Add(1)
+	go consumePigs(done, pigs)
+
+}
+
+func consumeCows(done <-chan interface{}, cows <-chan interface{}){
+	defer wg.Done()
+
+	for {
+		select {
+		case <- done:
+			return
+		case cow, ok := <- cows:
+			if !ok {
+				fmt.Println("channel closed")
+				return
+			}
+			// do some complex logic
+			fmt.Println(cow)
+		}
+	}
+} 
+
+
+func consumePigs(done <-chan interface{}, pigs <-chan interface{}){
+	defer wg.Done()
+
+	for {
+		select {
+		case <- done:
+			return
+		case pig, ok := <- pigs:
+			if !ok {
+				fmt.Println("channel closed")
+				return
+			}
+			// do some complex logic
+			fmt.Println(pig)
+		}
+	}
+} 
+
+func orDone(done, ch <-chan interface{}) <-chan interface{} {
+	relayStream := make(chan interface{}) // unbuffered channel
+
+	go func() {
+		defer close(relayStream)
+		for {
+			select {
+			case <- done:
+				return
+			case value, ok := <- ch:
+				if !ok {
+					return
+				}
+				select { // this is important to prevent blocking
+				case relayStream <- value:
+				}
+			}
+
+		}
+	}()
+	return relayStream
 }
 ```
-
-```shell
-$ go run simultaneousGoRoutinesWithMutex.go 
-[2 4 6 8 10]
-2.000412459s
-
-$ go run simultaneousGoRoutinesWithMutex.go
-[2 4 6 8 10]
-2.000947375s
-```
-
-Now you can see instead of passing entire slice, we are passing only one element. Now, you can see the output and order is maintained.
-
-You can also check the race condition
-```sh
-$ go run -race simultaneousGoRoutinesWithMutex.go
-[2 4 6 8 10]
-2.001568875s
-```
-
-
-##### reason
-If you closely watch, in mutex, we were sending entire slice and each call of go routine was trying to append value to the slice.
-In confinement, each individual go routine accesses only one index and updates it. Each go routine is "confined" to a particular index.
-
-![[Pasted image 20240803221720.png]]
