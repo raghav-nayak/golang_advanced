@@ -123,3 +123,147 @@ func main() {
 - **Flexibility and Reusability**: Generics make your code more flexible and reusable, reducing the need to write multiple versions of the same function or data structure for different types.
 
 Generics are a powerful feature in Go that allow for more abstract, reusable code without sacrificing type safety.
+
+<hr>
+
+
+Let's build a generic notification system in Go that can handle different types of notifications, such as email, SMS, and push notifications. We’ll use Go's generics to create a flexible system where different notification methods can be easily added and managed.
+
+### Step 1: Define a Generic Notification Interface
+
+We'll start by defining a `Notifier` interface that all notification types must implement:
+
+```go
+package main
+
+import "fmt"
+
+type Notifier interface {
+    SendNotification() string
+}
+```
+
+### Step 2: Implement Different Notification Types
+
+Now let's create concrete implementations for email, SMS, and push notifications:
+
+#### Email Notification
+
+```go
+type EmailNotification struct {
+    EmailAddress string
+    Message      string
+}
+
+func (e EmailNotification) SendNotification() string {
+    return fmt.Sprintf("Sending Email to %s: %s", e.EmailAddress, e.Message)
+}
+```
+
+#### SMS Notification
+
+```go
+type SMSNotification struct {
+    PhoneNumber string
+    Message     string
+}
+
+func (s SMSNotification) SendNotification() string {
+    return fmt.Sprintf("Sending SMS to %s: %s", s.PhoneNumber, s.Message)
+}
+```
+
+#### Push Notification
+
+```go
+type PushNotification struct {
+    DeviceID string
+    Message  string
+}
+
+func (p PushNotification) SendNotification() string {
+    return fmt.Sprintf("Sending Push Notification to %s: %s", p.DeviceID, p.Message)
+}
+```
+
+### Step 3: Create a Generic Notification Manager
+
+Now we’ll create a generic `NotificationManager` that can handle sending notifications regardless of their type:
+
+```go
+type NotificationManager[T Notifier] struct {
+    Notifications []T
+}
+
+func (nm *NotificationManager[T]) AddNotification(notification T) {
+    nm.Notifications = append(nm.Notifications, notification)
+}
+
+func (nm NotificationManager[T]) SendAll() {
+    for _, notification := range nm.Notifications {
+        fmt.Println(notification.SendNotification())
+    }
+}
+```
+
+### Explanation:
+
+- **Generic `NotificationManager`**: The `NotificationManager` is generic, meaning it can manage notifications of any type that implements the `Notifier` interface.
+- **`AddNotification` Method**: This method adds a new notification to the manager's list.
+- **`SendAll` Method**: This method iterates over all notifications and sends them using their respective `SendNotification` method.
+
+### Step 4: Use the Notification System
+
+Now let’s put everything together:
+
+```go
+func main() {
+    email := EmailNotification{
+        EmailAddress: "user@example.com",
+        Message:      "You've got a new email!",
+    }
+
+    sms := SMSNotification{
+        PhoneNumber: "+1234567890",
+        Message:     "Your OTP is 123456",
+    }
+
+    push := PushNotification{
+        DeviceID: "device_123",
+        Message:  "You have a new message!",
+    }
+
+    // Create a notification manager for email notifications
+    emailManager := NotificationManager[EmailNotification]{}
+    emailManager.AddNotification(email)
+
+    // Create a notification manager for SMS notifications
+    smsManager := NotificationManager[SMSNotification]{}
+    smsManager.AddNotification(sms)
+
+    // Create a notification manager for push notifications
+    pushManager := NotificationManager[PushNotification]{}
+    pushManager.AddNotification(push)
+
+    // Send all notifications
+    emailManager.SendAll()
+    smsManager.SendAll()
+    pushManager.SendAll()
+}
+```
+
+### Output:
+
+```sh
+Sending Email to user@example.com: You've got a new email!
+Sending SMS to +1234567890: Your OTP is 123456
+Sending Push Notification to device_123: You have a new message!
+```
+
+### Summary
+
+- **Generic Notification Manager**: The `NotificationManager` is a generic structure that can manage and send notifications of any type that implements the `Notifier` interface.
+- **Flexibility**: You can easily add new notification types (e.g., in-app notifications) by implementing the `Notifier` interface, without changing the `NotificationManager`.
+- **Type Safety**: Generics ensure that only valid notification types are added to the manager, providing type safety while maintaining flexibility.
+
+This example illustrates how generics in Go can be used to build a flexible, type-safe notification system that can easily accommodate different types of notifications and grow as new requirements emerge.
