@@ -45,18 +45,9 @@ func main() {
 func consumeCows(done <-chan interface{}, cows <-chan interface{}){
 	defer wg.Done()
 
-	for {
-		select {
-		case <- done:
-			return
-		case cow, ok := <- cows:
-			if !ok {
-				fmt.Println("channel closed")
-				return
-			}
-			// do some complex logic
-			fmt.Println(cow)
-		}
+	for cow := range orDone(done, cows){
+		// do some complex logic
+		fmt.Println(cow)
 	}
 } 
 
@@ -94,9 +85,10 @@ func orDone(done, ch <-chan interface{}) <-chan interface{} {
 				}
 				select { // this is important to prevent blocking
 				case relayStream <- value:
+				case <-done:
+					return
 				}
 			}
-
 		}
 	}()
 	return relayStream
