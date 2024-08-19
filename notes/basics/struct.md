@@ -113,3 +113,45 @@ func main() {
 	fmt.Println(string(deptJsonData)) {"name":"IT","emps":[{},{}]}
 }
 ```
+
+
+
+### struct tags 
+- attach metadata to struct fields
+- allows developers to use **custom annotations** for several use cases.
+	- e.g. 
+		- database mapping
+		- validation
+		- serialization
+- allows us to use declarative programming pattern
+
+reflection
+- examine, introspect, and modify behavior **at runtime**
+- disadvantages
+	- less performant
+	- hard to read
+- use it when it is necessary
+
+```go
+type User struct {
+	Name string `validate: "min=2,max=32"`
+	Email string `validate: "required,email"`
+}
+```
+you can give any key. Here we are using user defined key called `validate`. This is called tags.
+
+```go
+t := reflect.TypeOf(user)
+fmt.Println("Name: ", t.Name()) // Name:  User
+fmt.Println("Kind: ", t.Kind()) // Kind:  struct
+
+for i:= 0; i < t.NumField(); i++ {
+	field := t.Field(i)
+
+	fmt.Println("field: ", field) // {Name  string validate: "min=2,max=32" 0 [0] false}
+	fmt.Println("Name: ", field.Name) // Name:  Name
+	fmt.Println("Tag: ", field.Tag) // Tag:  validate: "min=2,max=32"
+}
+```
+
+
