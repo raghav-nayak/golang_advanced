@@ -2,7 +2,6 @@ struct
 - group of related data
 - collection of fields
 
-
 ```go
 package main
 
@@ -115,7 +114,6 @@ func main() {
 ```
 
 
-
 ### struct tags 
 - attach metadata to struct fields
 - allows developers to use **custom annotations** for several use cases.
@@ -155,3 +153,101 @@ for i:= 0; i < t.NumField(); i++ {
 ```
 
 
+
+In Go, **struct tags** are annotations added to struct fields that provide metadata or additional information about those fields. These tags are often used for things like specifying how a field should be encoded/decoded when working with libraries like JSON, XML, or databases.
+
+### Syntax of Struct Tags
+
+Struct tags are written as string literals placed immediately after the field type in a struct definition. The tags usually consist of key-value pairs separated by a colon and enclosed in backticks (`).
+
+```go
+type Example struct {
+    FieldName Type `tagName:"tagValue"`
+}
+```
+
+### Common Uses of Struct Tags
+
+1. **JSON Encoding/Decoding:** The `json` tag is used to control how a field is encoded to or decoded from JSON.
+
+```go
+type Person struct {
+    Name   string `json:"name"`
+    Age    int    `json:"age"`
+    Email  string `json:"email,omitempty"` // omitempty omits the field if it is empty or zero
+    Secret string `json:"-"`               // "-" tells JSON to ignore this field
+}
+```
+    
+- `omitempty`: Omits the field if it has a zero value (e.g., `0` for int, `""` for string).
+- `-`: Ignores the field completely when encoding/decoding.
+
+2. **Database ORM:** Struct tags can be used by Object-Relational Mapping (ORM) libraries like `gorm` to map struct fields to database columns.
+    
+```go
+type User struct {
+    ID        uint      `gorm:"primaryKey"`
+    FirstName string    `gorm:"column:first_name"`
+    CreatedAt time.Time `gorm:"autoCreateTime"`
+}
+```
+    
+- `primaryKey`: Marks the field as a primary key.
+- `column`: Specifies the database column name.
+
+3. **XML Encoding/Decoding:** The `xml` tag is used to control how a field is encoded to or decoded from XML.
+    
+```go
+type Article struct {
+    Title   string `xml:"title"`
+    Content string `xml:"content"`
+    ID      string `xml:"id,attr"` // attr specifies that this field should be an XML attribute
+}
+```
+    
+- `attr`: Indicates that the field should be treated as an XML attribute rather than an element.
+
+4. **Form Values:** In web applications, struct tags can be used to bind form values to struct fields.
+
+```go
+type SignupForm struct {
+    Username string `form:"username"`
+    Password string `form:"password"`
+}
+```
+    
+
+### Accessing Struct Tags in Code
+
+You can access struct tags programmatically using the `reflect` package. This is useful if you need to inspect or use tags at runtime.
+
+```go
+package main
+
+import (
+    "fmt"
+    "reflect"
+)
+
+type Person struct {
+    Name string `json:"name" validate:"required"`
+    Age  int    `json:"age"`
+}
+
+func main() {
+    p := Person{Name: "Alice", Age: 30}
+    t := reflect.TypeOf(p)
+
+    for i := 0; i < t.NumField(); i++ {
+        field := t.Field(i)
+        fmt.Printf("%s: %s\n", field.Name, field.Tag.Get("json"))
+        fmt.Printf("Validation: %s\n", field.Tag.Get("validate"))
+    }
+}
+```
+
+This code will output the JSON tags and validation rules for each field in the `Person` struct.
+
+### Summary
+
+Struct tags in Go are a powerful feature that allows you to attach metadata to struct fields, which can then be used by various libraries and tools to control how those fields are processed. They are commonly used for JSON, XML, and database operations, among other things.
